@@ -1,3 +1,7 @@
+"""
+GREASE PENCIL: REFINE LINE
+Version: 0.01
+"""
 import bpy
 import mathutils
 from bpy.props import IntProperty, FloatProperty
