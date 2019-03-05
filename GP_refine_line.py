@@ -1,11 +1,11 @@
 import bpy
 import mathutils
 from bpy.props import IntProperty, FloatProperty
-"""Sepan disculpar lo sucio de este codigo"""
-print ("")
 
+print ("")
 def gpr_refine():
-    gpr_working_distance = 0.05    
+    gpr_max_distance = 0.1
+    gpr_working_distance = gpr_max_distance   
     gpr_vertexIn = 0
     gpr_vertexOut = 3
     gpr_actual_distance = gpr_working_distance
@@ -14,12 +14,10 @@ def gpr_refine():
     gpr_strk2_in=0
     gpr_strk2_out=0
 
-    """Detectar si tenemos seleccionado un GP OK"""
-    """Detectar si estamos en Modo dibujo OK"""
-    if bpy.context.mode == 'PAINT_GPENCIL':       
-        """Mejorar el punto de recuperación para Ctrl Z"""
-        """Guardar el stroke placement actual"""
+    if bpy.context.mode == 'PAINT_GPENCIL':
+        #print("PODEMOS CONTINUAR")
         lyr = bpy.context.object.data.layers.active
+        
         if lyr.active_frame.strokes:
             bpy.ops.ed.flush_edits(-1)
             if len(lyr.active_frame.strokes)>1 :
@@ -40,11 +38,9 @@ def gpr_refine():
                             if nn < len(stroke1.points)-2 :                                                                                   
                                 gpr_working_distance = (point1.co - stroke1.points[nn+1].co).length
                                 #print ("IN  gpr_working_distance: ", gpr_working_distance)                         
-                                                   
-                            #print ("parabola", nn, ": ", p)                                           
                             distance = (point2.co - point1.co).length
                             if distance < gpr_working_distance:
-                                print(nn)
+                                #print(nn)
                                 if distance < gpr_actual_distance:
                                     n1=nn
                                     gpr_vertexIn = 1
@@ -66,7 +62,7 @@ def gpr_refine():
                         n2 += 1    
                             
                 #BUSCAMOS EL SEGUNDO PUNTO DE CORTE-reseteamos gpr_actual_distance
-                gpr_actual_distance = gpr_working_distance  
+                gpr_actual_distance = gpr_max_distance 
                 
                 if gpr_vertexOut == 0:
                     print ("OUT")
@@ -99,37 +95,35 @@ def gpr_refine():
                             break                                             
                         n2 += 1
                 
-            # REFINA O REEMPLAZA . todo eso no va acá
-            e = gpr_strk2_in-gpr_strk2_out 
-            print ("gpr_vertexOut: ", gpr_vertexOut)
-            if e > -2 and e < 2 : #REEMPLAZA AL INICIO O AL FINAL
-                if gpr_vertexOut!=3:               
-                    if gpr_strk1_in <  len(stroke1.points)/2:          
-                        gpr_vertexIn = 1
-                        print("AGREGA LINEA AL INICIO", gpr_vertexOut )
-                    else:                    
-                        print("AGREGA LINEA AL FINAL")
-                gpr_vertexOut = 0 
-            else:#REFINA
-                print("REFINA LINEA")
-               
-                
-                                    
-            if gpr_vertexIn == 2 and gpr_vertexOut == 2 :
-                bpy.ops.ed.flush_edits()
-                             
-                print(".......1")
+            
+            #Chequeamos si debemos extender linea (al inicio o al final) o no  
+            if gpr_vertexIn == 2 or gpr_vertexOut == 2 :
+                print(".............................................")
+                print("gpr_vertexIn",gpr_vertexIn,"gpr_vertexOut",gpr_vertexOut)
                 print("linea1: ", gpr_strk1_in, " ", gpr_strk1_out, " >", len(stroke1.points))
                 print("linea2: ", gpr_strk2_in, " ", gpr_strk2_out ," >", len(stroke2.points))
-                print(".......")
+                print(".............................................")
+                e = gpr_strk2_in-gpr_strk2_out 
+                print ("gpr_vertexOut: ", gpr_vertexOut)
+                if e > -2 and e < 2 : #REEMPLAZA AL INICIO O AL FINAL
+                    if gpr_strk1_in <  len(stroke1.points)/2:          
+                        gpr_vertexIn = 3
+                        print("AGREGA LINEA AL INICIO", gpr_vertexOut )
+                    else:
+                        gpr_vertexIn = 4                    
+                        print("AGREGA LINEA AL FINAL")                   
+
+            #Procesamos linea                       
+            if gpr_vertexIn == 2 and gpr_vertexOut == 2 :
+                bpy.ops.ed.flush_edits()                           
                 
+                #Chequeamos si las lineas estan invertidas
                 if gpr_strk1_in > gpr_strk1_out:
                     print("linea 1 invertida")
                     print ("in: ", gpr_strk1_in, "   out: ",gpr_strk1_out ," len: ", len(stroke1.points) )                  
                     gpr_strk1_in = len(stroke1.points)-gpr_strk1_in
                     gpr_strk1_out = len(stroke1.points)-gpr_strk1_out
                     
-                    #bpy.context.mode = 'EDIT'
                     bpy.ops.gpencil.editmode_toggle()
                     bpy.ops.gpencil.select_all(action='DESELECT')
                     bpy.context.object.data.layers.active.active_frame.strokes[-2].select = True
@@ -139,18 +133,17 @@ def gpr_refine():
                 if gpr_strk2_in > gpr_strk2_out:
                     print("linea 2 invertida")
                     print ("in: ", gpr_strk2_in, "   out: ",gpr_strk2_out ," len: ", len(stroke2.points) )                  
-                    
                     gpr_strk2_in = len(stroke2.points)-gpr_strk2_in
                     gpr_strk2_out = len(stroke2.points)-gpr_strk2_out
                     
-                    #bpy.context.mode = 'EDIT'
                     bpy.ops.gpencil.editmode_toggle()
                     bpy.ops.gpencil.select_all(action='DESELECT')
                     bpy.context.object.data.layers.active.active_frame.strokes[-1].select = True
                     bpy.ops.gpencil.stroke_flip()
                     bpy.ops.gpencil.paintmode_toggle()
-                    print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points)) 
-                    
+                    print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points))
+                
+                #Creamos una tercera linea para alojar el resultado    
                 lyr = bpy.context.object.data.layers.active
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
@@ -162,65 +155,32 @@ def gpr_refine():
                 print ("1MODIFICANDO LINEA de 1 a 2")
                 for n in range(gpr_strk1_in):
                     stroke3.points[n].co=stroke1.points[n].co
-                    stroke3.points[n].strength=1
+                    stroke3.points[n].strength=stroke1.points[n].strength
                     stroke3.points[n].pressure=stroke1.points[n].pressure
                 for n in range (gpr_strk2_out-gpr_strk2_in):
                     nn=n+gpr_strk1_in
                     nn2= n +gpr_strk2_in
                     #print(stroke2.points[nn2].co)
                     stroke3.points[nn].co=stroke2.points[nn2].co
-                    stroke3.points[nn].strength=1
+                    stroke3.points[nn].strength=stroke2.points[nn2].strength
                     stroke3.points[nn].pressure=stroke2.points[nn2].pressure
                 for n in range(len(stroke1.points)-gpr_strk1_out):
                     nn = n+gpr_strk1_in+(gpr_strk2_out-gpr_strk2_in)
                     nn2 = n+gpr_strk1_out
                     stroke3.points[nn].co=stroke1.points[nn2].co
-                    stroke3.points[nn].strength=1
+                    stroke3.points[nn].strength=stroke1.points[nn2].strength
                     stroke3.points[nn].pressure=stroke1.points[nn2].pressure   
-                """  
-                ELIMINAR LOS DOS STROKES ANTERIORES
-                """
+                 
+                #ELIMINAMOS LOS DOS STROKES ANTERIORES               
                 
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
+               
+                #Generamos un punto de UNDO
                 bpy.ops.ed.undo_push()
                 
-                 
-                #stroke2.remove()
-        
-            elif gpr_vertexIn == 2:
-                print(".......2")
-                print("linea1: ", gpr_strk1_in, " ", gpr_strk1_out, " >", len(stroke1.points))
-                print("linea2: ", gpr_strk2_in, " ", gpr_strk2_out ," >", len(stroke2.points))
-                print(".......")
-                """if gpr_strk1_in > gpr_strk1_out:
-                    print("linea 1 invertida")
-                    print ("in: ", gpr_strk1_in, "   out: ",gpr_strk1_out ," len: ", len(stroke1.points) )                  
-                    gpr_strk1_in = len(stroke1.points)-gpr_strk1_in
-                    gpr_strk1_out = len(stroke1.points)-gpr_strk1_out
-                    
-                    #bpy.context.mode = 'EDIT'
-                    bpy.ops.gpencil.editmode_toggle()
-                    bpy.ops.gpencil.select_all(action='DESELECT')
-                    bpy.context.object.data.layers.active.active_frame.strokes[-2].select = True
-                    bpy.ops.gpencil.stroke_flip()
-                    bpy.ops.gpencil.paintmode_toggle()
-                    print (">in: ", gpr_strk1_in, "   out: ",gpr_strk1_out , " len: ", len(stroke1.points)) 
-                if gpr_strk2_in > gpr_strk2_out:
-                    print("linea 2 invertida")
-                    print ("in: ", gpr_strk2_in, "   out: ",gpr_strk2_out ," len: ", len(stroke2.points) )                  
-                    
-                    gpr_strk2_in = len(stroke2.points)-gpr_strk2_in
-                    gpr_strk2_out = len(stroke2.points)-gpr_strk2_out
-                    
-                    #bpy.context.mode = 'EDIT'
-                    bpy.ops.gpencil.editmode_toggle()
-                    bpy.ops.gpencil.select_all(action='DESELECT')
-                    bpy.context.object.data.layers.active.active_frame.strokes[-1].select = True
-                    bpy.ops.gpencil.stroke_flip()
-                    bpy.ops.gpencil.paintmode_toggle()
-                    print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points))""" 
-                
+            elif gpr_vertexIn == 4:#EXTIENDE LINEA DESDE EL INICIO
+                print ("SUMA LINEA AL FINAL")
                 lyr = bpy.context.object.data.layers.active
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
@@ -229,17 +189,16 @@ def gpr_refine():
                 #creamos el largo final de la linea
                 c = gpr_strk1_in+(len(stroke2.points)-gpr_strk2_in)
                 stroke3.points.add(count= c)
-                print ("2CORTANDO LINEA Y REDIRECCIONANDO")
                 for n in range(gpr_strk1_in):
                     stroke3.points[n].co=stroke1.points[n].co
-                    stroke3.points[n].strength=1
+                    stroke3.points[n].strength=stroke1.points[n].strength
                     stroke3.points[n].pressure=stroke1.points[n].pressure
                 for n in range (len(stroke2.points)-gpr_strk2_in):
                     nn=n+gpr_strk1_in
                     nn2= n +gpr_strk2_in
                     #print(stroke2.points[nn2].co)
                     stroke3.points[nn].co=stroke2.points[nn2].co
-                    stroke3.points[nn].strength=1
+                    stroke3.points[nn].strength=stroke2.points[nn2].strength
                     stroke3.points[nn].pressure=stroke2.points[nn2].pressure                   
                 """  
                 ELIMINAR LOS DOS STROKES ANTERIORES
@@ -247,41 +206,9 @@ def gpr_refine():
                          
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
-                bpy.ops.ed.undo_push() 
-                #stroke2.remove()
-            elif gpr_vertexIn == 1:
-                print(".......3")
-                print("linea1: ", gpr_strk1_in, " ", gpr_strk1_out, " >", len(stroke1.points))
-                print("linea2: ", gpr_strk2_in, " ", gpr_strk2_out ," >", len(stroke2.points))
-                print(".......")
-                """if gpr_strk1_in > gpr_strk1_out:
-                    print("linea 1 invertida")
-                    print ("in: ", gpr_strk1_in, "   out: ",gpr_strk1_out ," len: ", len(stroke1.points) )                  
-                    gpr_strk1_in = len(stroke1.points)-gpr_strk1_in
-                    gpr_strk1_out = len(stroke1.points)-gpr_strk1_out
-                    
-                    #bpy.context.mode = 'EDIT'
-                    bpy.ops.gpencil.editmode_toggle()
-                    bpy.ops.gpencil.select_all(action='DESELECT')
-                    bpy.context.object.data.layers.active.active_frame.strokes[-2].select = True
-                    bpy.ops.gpencil.stroke_flip()
-                    bpy.ops.gpencil.paintmode_toggle()
-                    print (">in: ", gpr_strk1_in, "   out: ",gpr_strk1_out , " len: ", len(stroke1.points)) """
-                if gpr_strk2_in > gpr_strk2_out:
-                    print("linea 2 invertida")
-                    print ("in: ", gpr_strk2_in, "   out: ",gpr_strk2_out ," len: ", len(stroke2.points) )                  
-                    
-                    gpr_strk2_in = len(stroke2.points)-gpr_strk2_in
-                    gpr_strk2_out = len(stroke2.points)-gpr_strk2_out
-                    
-                    #bpy.context.mode = 'EDIT'
-                    bpy.ops.gpencil.editmode_toggle()
-                    bpy.ops.gpencil.select_all(action='DESELECT')
-                    bpy.context.object.data.layers.active.active_frame.strokes[-1].select = True
-                    bpy.ops.gpencil.stroke_flip()
-                    bpy.ops.gpencil.paintmode_toggle()
-                    print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points)) 
-                
+                bpy.ops.ed.undo_push()
+            elif gpr_vertexIn == 3:#EXTIENDE LINEA DESDE EL FINAL
+                print ("SUMA LINEA AL EL INICIO")
                 lyr = bpy.context.object.data.layers.active
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
@@ -290,20 +217,19 @@ def gpr_refine():
                 #creamos el largo final de la linea
                 c = (len(stroke2.points)-gpr_strk2_in)+(len(stroke1.points)-gpr_strk1_in)
                 stroke3.points.add(count= c)
-                print ("3CORTANDO LINEA Y REDIRECCIONANDO de 2 a 1") 
+                 
                 print("len(stroke2.points): ",len(stroke2.points), "(gpr_strk2_in):", (gpr_strk2_in))              
                 for n in range(len(stroke2.points)-(gpr_strk2_in)):
-                                 
                     nn2= len(stroke2.points) - n -1           
                     stroke3.points[n].co=stroke2.points[nn2].co
-                    stroke3.points[n].strength=1
+                    stroke3.points[n].strength=stroke2.points[nn2].strength
                     stroke3.points[n].pressure=stroke2.points[nn2].pressure
                 for n in range (len(stroke1.points)-(gpr_strk1_in)):
                     nn=n+len(stroke2.points)-(gpr_strk2_in)
                     nn2= n +gpr_strk1_in
                     #print(stroke2.points[nn2].co)
                     stroke3.points[nn].co=stroke1.points[nn2].co
-                    stroke3.points[nn].strength=1
+                    stroke3.points[nn].strength=stroke1.points[nn2].strength
                     stroke3.points[nn].pressure=stroke1.points[nn2].pressure                   
                 """  
                 ELIMINAR LOS DOS STROKES ANTERIORES
@@ -311,9 +237,8 @@ def gpr_refine():
                          
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
-                bpy.ops.ed.undo_push() 
-                #stroke2.remove()
-            else:
+                bpy.ops.ed.undo_push()
+            else:            
                 print("no se creara ninguna linea")
 
 
@@ -323,7 +248,6 @@ class ModalOperator(bpy.types.Operator):
     """Move an object with the mouse, example"""
     bl_idname = "gpencil.modal_operator"
     bl_label = "Refine Line"
-
     first_value = FloatProperty()
 
     def modal(self, context, event):
@@ -331,7 +255,6 @@ class ModalOperator(bpy.types.Operator):
             
             self.lmb = event.value == 'RELEASE'
             #print (self.lmb)
-            
             """
             if event.type == 'LEFTMOUSE' :
                 # we could handle PRESS and RELEASE individually if necessary
@@ -357,10 +280,7 @@ class ModalOperator(bpy.types.Operator):
     def invoke(self, context, event):
         # variable to remember left mouse button state    
         self.lmb = True
-
         if context.object:
-
-
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
         else:
@@ -371,10 +291,8 @@ class ModalOperator(bpy.types.Operator):
 def register():
     bpy.utils.register_class(ModalOperator)
 
-
 def unregister():
     bpy.utils.unregister_class(ModalOperator)
-
 
 if __name__ == "__main__":
     register()
