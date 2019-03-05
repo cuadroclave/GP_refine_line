@@ -1,6 +1,6 @@
 """
 GREASE PENCIL: REFINE LINE
-Version: 0.01
+Version: 0.02
 """
 import bpy
 import mathutils
@@ -8,7 +8,7 @@ from bpy.props import IntProperty, FloatProperty
 
 print ("")
 def gpr_refine():
-    gpr_max_distance = 0.1
+    gpr_max_distance = 0.1 #Todo: hacer que este valor sea calculado segun la distancia de la vista.
     gpr_working_distance = gpr_max_distance   
     gpr_vertexIn = 0
     gpr_vertexOut = 3
@@ -17,9 +17,11 @@ def gpr_refine():
     gpr_strk1_out=0
     gpr_strk2_in=0
     gpr_strk2_out=0
+    gpr_closing = 4
 
     if bpy.context.mode == 'PAINT_GPENCIL':
         #print("PODEMOS CONTINUAR")
+
         lyr = bpy.context.object.data.layers.active
         
         if lyr.active_frame.strokes:
@@ -119,9 +121,8 @@ def gpr_refine():
 
             #Procesamos linea                       
             if gpr_vertexIn == 2 and gpr_vertexOut == 2 :
-                bpy.ops.ed.flush_edits()                           
-                
-                #Chequeamos si las lineas estan invertidas
+                bpy.ops.ed.flush_edits()
+                #Chequeamos si la linea 1 esta invertida
                 if gpr_strk1_in > gpr_strk1_out:
                     print("linea 1 invertida")
                     print ("in: ", gpr_strk1_in, "   out: ",gpr_strk1_out ," len: ", len(stroke1.points) )                  
@@ -134,49 +135,99 @@ def gpr_refine():
                     bpy.ops.gpencil.stroke_flip()
                     bpy.ops.gpencil.paintmode_toggle()
                     print (">in: ", gpr_strk1_in, "   out: ",gpr_strk1_out , " len: ", len(stroke1.points)) 
-                if gpr_strk2_in > gpr_strk2_out:
-                    print("linea 2 invertida")
-                    print ("in: ", gpr_strk2_in, "   out: ",gpr_strk2_out ," len: ", len(stroke2.points) )                  
-                    gpr_strk2_in = len(stroke2.points)-gpr_strk2_in
-                    gpr_strk2_out = len(stroke2.points)-gpr_strk2_out
+                #Verificamos si cerramos la linea o no                                
+                cl = len(stroke1.points)/gpr_closing
+                if gpr_strk1_in < cl and gpr_strk1_out > len(stroke1.points)-cl:
+                    gpr_close_line = True
+                    #la linea 2 debe estar invertida
+                    if gpr_strk2_in < gpr_strk2_out:
+                        print("invertiendo linea 2")
+                        print ("in: ", gpr_strk2_in, "   out: ",gpr_strk2_out ," len: ", len(stroke2.points) )                  
+                        gpr_strk2_in = len(stroke2.points)-gpr_strk2_in
+                        gpr_strk2_out = len(stroke2.points)-gpr_strk2_out
+                        
+                        bpy.ops.gpencil.editmode_toggle()
+                        bpy.ops.gpencil.select_all(action='DESELECT')
+                        bpy.context.object.data.layers.active.active_frame.strokes[-1].select = True
+                        bpy.ops.gpencil.stroke_flip()
+                        bpy.ops.gpencil.paintmode_toggle()
+                        print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points))
+                else:
+                    gpr_close_line = False
+                    #la linea 2 NO debe estar invertida
                     
-                    bpy.ops.gpencil.editmode_toggle()
-                    bpy.ops.gpencil.select_all(action='DESELECT')
-                    bpy.context.object.data.layers.active.active_frame.strokes[-1].select = True
-                    bpy.ops.gpencil.stroke_flip()
-                    bpy.ops.gpencil.paintmode_toggle()
-                    print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points))
+                    if gpr_strk2_in > gpr_strk2_out:
+                        print("linea 2 invertida")
+                        print ("in: ", gpr_strk2_in, "   out: ",gpr_strk2_out ," len: ", len(stroke2.points) )                  
+                        gpr_strk2_in = len(stroke2.points)-gpr_strk2_in
+                        gpr_strk2_out = len(stroke2.points)-gpr_strk2_out
+                        
+                        bpy.ops.gpencil.editmode_toggle()
+                        bpy.ops.gpencil.select_all(action='DESELECT')
+                        bpy.context.object.data.layers.active.active_frame.strokes[-1].select = True
+                        bpy.ops.gpencil.stroke_flip()
+                        bpy.ops.gpencil.paintmode_toggle()
+                        print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points))
                 
-                #Creamos una tercera linea para alojar el resultado    
+                
                 lyr = bpy.context.object.data.layers.active
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
                 stroke3.line_width = stroke1.line_width#Todo: Detectar el size del brush actual para asignar este valor
                 stroke3.material_index = stroke1.material_index#Todo: Detectar Usar el material que usa el anteultima stroke
                 #creamos el largo final de la linea
-                c = gpr_strk1_in+(gpr_strk2_out-gpr_strk2_in)+(len(stroke1.points)-gpr_strk1_out)
-                stroke3.points.add(count= c)
-                print ("1MODIFICANDO LINEA de 1 a 2")
-                for n in range(gpr_strk1_in):
-                    stroke3.points[n].co=stroke1.points[n].co
-                    stroke3.points[n].strength=stroke1.points[n].strength
-                    stroke3.points[n].pressure=stroke1.points[n].pressure
-                for n in range (gpr_strk2_out-gpr_strk2_in):
-                    nn=n+gpr_strk1_in
-                    nn2= n +gpr_strk2_in
-                    #print(stroke2.points[nn2].co)
-                    stroke3.points[nn].co=stroke2.points[nn2].co
-                    stroke3.points[nn].strength=stroke2.points[nn2].strength
-                    stroke3.points[nn].pressure=stroke2.points[nn2].pressure
-                for n in range(len(stroke1.points)-gpr_strk1_out):
-                    nn = n+gpr_strk1_in+(gpr_strk2_out-gpr_strk2_in)
-                    nn2 = n+gpr_strk1_out
-                    stroke3.points[nn].co=stroke1.points[nn2].co
-                    stroke3.points[nn].strength=stroke1.points[nn2].strength
-                    stroke3.points[nn].pressure=stroke1.points[nn2].pressure   
+                
+                
+                    
+                if gpr_close_line == True:
+                    #LINEA 1 DESDE IN A OUT, LINEA 2 DESDE IN A OUT
+                    l1 = gpr_strk1_out-gpr_strk1_in
+                    l2 = gpr_strk2_in-gpr_strk2_out
+                    print ("l1:",l1 , "l2:",l2)
+                    c =l1+l2                    
+                    stroke3.points.add(count= c)
+                    print ("CERRANDO LINEA")
+                    for n in range(l1):
+                        nn = gpr_strk1_in+n
+                        stroke3.points[n].co=stroke1.points[nn].co
+                        stroke3.points[n].strength=stroke1.points[nn].strength
+                        stroke3.points[n].pressure=stroke1.points[nn].pressure
+                        
+                    for n in range (l2):
+                        nn=n+l1
+                        nn2= n + gpr_strk2_out
+                        #print(stroke2.points[nn2].co)
+                        stroke3.points[nn].co=stroke2.points[nn2].co
+                        stroke3.points[nn].strength=stroke2.points[nn2].strength
+                        stroke3.points[nn].pressure=stroke2.points[nn2].pressure
+                    bpy.context.object.data.layers.active.active_frame.strokes[-1].draw_cyclic
+                else:
+                    #Creamos una tercera linea para alojar el resultado 
+                    l1 = gpr_strk1_in
+                    l2 = gpr_strk2_out-gpr_strk2_in
+                    l3 = len(stroke1.points)-gpr_strk1_out 
+                    c = l1+l2+l3
+                    stroke3.points.add(count= c)
+                    print ("MODIFICANDO EL INTERIOR DE LA LÍNEA")
+                    for n in range(l1):
+                        stroke3.points[n].co=stroke1.points[n].co
+                        stroke3.points[n].strength=stroke1.points[n].strength
+                        stroke3.points[n].pressure=stroke1.points[n].pressure
+                    for n in range (l2):
+                        nn=n+l1
+                        nn2= n +gpr_strk2_in
+                        #print(stroke2.points[nn2].co)
+                        stroke3.points[nn].co=stroke2.points[nn2].co
+                        stroke3.points[nn].strength=stroke2.points[nn2].strength
+                        stroke3.points[nn].pressure=stroke2.points[nn2].pressure
+                    for n in range(l3):
+                        nn = n+l1+l2
+                        nn2 = n+gpr_strk1_out
+                        stroke3.points[nn].co=stroke1.points[nn2].co
+                        stroke3.points[nn].strength=stroke1.points[nn2].strength
+                        stroke3.points[nn].pressure=stroke1.points[nn2].pressure   
                  
                 #ELIMINAMOS LOS DOS STROKES ANTERIORES               
-                
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
                
@@ -186,28 +237,29 @@ def gpr_refine():
             elif gpr_vertexIn == 4:#EXTIENDE LINEA DESDE EL INICIO
                 print ("SUMA LINEA AL FINAL")
                 lyr = bpy.context.object.data.layers.active
+                
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
                 stroke3.line_width = stroke1.line_width#Todo: Detectar el size del brush actual para asignar este valor
                 stroke3.material_index = stroke1.material_index#Todo: Detectar Usar el material que usa el anteultima stroke
                 #creamos el largo final de la linea
-                c = gpr_strk1_in+(len(stroke2.points)-gpr_strk2_in)
+                l1 = gpr_strk1_in
+                l2 = len(stroke2.points)-gpr_strk2_in
+                c = l1+l2
                 stroke3.points.add(count= c)
-                for n in range(gpr_strk1_in):
+                for n in range(l1):
                     stroke3.points[n].co=stroke1.points[n].co
                     stroke3.points[n].strength=stroke1.points[n].strength
                     stroke3.points[n].pressure=stroke1.points[n].pressure
-                for n in range (len(stroke2.points)-gpr_strk2_in):
-                    nn=n+gpr_strk1_in
+                for n in range (l2):
+                    nn=n+l1
                     nn2= n +gpr_strk2_in
                     #print(stroke2.points[nn2].co)
                     stroke3.points[nn].co=stroke2.points[nn2].co
                     stroke3.points[nn].strength=stroke2.points[nn2].strength
                     stroke3.points[nn].pressure=stroke2.points[nn2].pressure                   
-                """  
-                ELIMINAR LOS DOS STROKES ANTERIORES
-                """ 
-                         
+                  
+                #ELIMINAR LOS DOS STROKES ANTERIORES
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
                 bpy.ops.ed.undo_push()
@@ -219,26 +271,26 @@ def gpr_refine():
                 stroke3.line_width = stroke1.line_width#Todo: Detectar el size del brush actual para asignar este valor
                 stroke3.material_index = stroke1.material_index#Todo: Detectar Usar el material que usa el anteultima stroke
                 #creamos el largo final de la linea
-                c = (len(stroke2.points)-gpr_strk2_in)+(len(stroke1.points)-gpr_strk1_in)
+                l1 = len(stroke2.points)-gpr_strk2_in
+                l2 = len(stroke1.points)-gpr_strk1_in
+                c = l1+l2
                 stroke3.points.add(count= c)
                  
                 print("len(stroke2.points): ",len(stroke2.points), "(gpr_strk2_in):", (gpr_strk2_in))              
-                for n in range(len(stroke2.points)-(gpr_strk2_in)):
+                for n in range(l1):
                     nn2= len(stroke2.points) - n -1           
                     stroke3.points[n].co=stroke2.points[nn2].co
                     stroke3.points[n].strength=stroke2.points[nn2].strength
                     stroke3.points[n].pressure=stroke2.points[nn2].pressure
-                for n in range (len(stroke1.points)-(gpr_strk1_in)):
-                    nn=n+len(stroke2.points)-(gpr_strk2_in)
+                for n in range (l2):
+                    nn=n+l1
                     nn2= n +gpr_strk1_in
                     #print(stroke2.points[nn2].co)
                     stroke3.points[nn].co=stroke1.points[nn2].co
                     stroke3.points[nn].strength=stroke1.points[nn2].strength
                     stroke3.points[nn].pressure=stroke1.points[nn2].pressure                   
-                """  
-                ELIMINAR LOS DOS STROKES ANTERIORES
-                """ 
-                         
+                 
+                #ELIMINAR LOS DOS STROKES ANTERIORES
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
                 bpy.ops.ed.undo_push()
