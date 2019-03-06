@@ -9,7 +9,7 @@ A quick implementation of an idea of a tool for Blender's Grease Pencil
 Una Implementación rápida de una idea para una herramienta de Grease Pencil
 
 1. Descarga el archivo .py.
-2. Abrelo in el editor de texto de blender y ejecutalo.
+2. Abrelo en el editor de texto de blender y ejecutalo.
 3. Ve al modo de dibujo de Grease Pencil y presiona F3 para buscar "Refine Line".
-4. Dibuja una linea y luego otra sobre la primera para modificarla. 
-5. Para cancelar el comportamiento de esta herramienta puedes presionar el botón medio del ratón, Esc o Barra Espaciadora.
+4. Dibuja una linea y luego dibuja otra sobre la anterior para modificarla. 
+5. Para cancelar la ejecución de esta herramienta puedes presionar el botón medio del ratón, Esc o Barra Espaciadora.
