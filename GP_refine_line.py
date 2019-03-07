@@ -1,6 +1,6 @@
 """
 GREASE PENCIL: REFINE LINE
-Version: 0.03
+Version: 0.04
 """
 import bpy
 import mathutils
@@ -178,6 +178,7 @@ def gpr_refine():
                 #creamos el largo final de la linea
                 if gpr_close_line == True:
                     #LINEA 1 DESDE IN A OUT, LINEA 2 DESDE IN A OUT
+                    #Creamos una tercera linea para alojar el resultado
                     l1 = gpr_strk1_out-gpr_strk1_in
                     l2 = gpr_strk2_in-gpr_strk2_out
                     print ("l1:",l1 , "l2:",l2)
@@ -200,31 +201,86 @@ def gpr_refine():
                     stroke3.draw_cyclic = True
                 else:
                     #Creamos una tercera linea para alojar el resultado 
-                    l1 = gpr_strk1_in
-                    l2 = gpr_strk2_out-gpr_strk2_in
-                    l3 = len(stroke1.points)-gpr_strk1_out 
-                    c = l1+l2+l3
-                    stroke3.points.add(count= c)
-                    print ("MODIFICANDO EL INTERIOR DE LA LÍNEA")
-                    for n in range(l1):
-                        stroke3.points[n].co=stroke1.points[n].co
-                        stroke3.points[n].strength=stroke1.points[n].strength
-                        stroke3.points[n].pressure=stroke1.points[n].pressure
-                    for n in range (l2):
-                        nn=n+l1
-                        nn2= n +gpr_strk2_in
-                        #print(stroke2.points[nn2].co)
-                        stroke3.points[nn].co=stroke2.points[nn2].co
-                        stroke3.points[nn].strength=stroke2.points[nn2].strength
-                        stroke3.points[nn].pressure=stroke2.points[nn2].pressure
-                    for n in range(l3):
-                        nn = n+l1+l2
-                        nn2 = n+gpr_strk1_out
-                        stroke3.points[nn].co=stroke1.points[nn2].co
-                        stroke3.points[nn].strength=stroke1.points[nn2].strength
-                        stroke3.points[nn].pressure=stroke1.points[nn2].pressure   
-                if stroke1.draw_cyclic == True:
-                    stroke3.draw_cyclic = True
+                    if stroke1.draw_cyclic == True:
+                        print("CICLIC")
+                        len1 = gpr_strk1_out-gpr_strk1_in
+                        if len1 > len(stroke1.points)/2:
+                            print("ciclic = True, area grande")
+                            #dibujo 3 y 4
+                            l1 = gpr_strk1_out-gpr_strk1_in
+                            l2 = gpr_strk2_out-gpr_strk2_in                         
+                            c = l1+l2
+                            stroke3.points.add(count= c)                            
+                            for n in range(l1):
+                                nn = n+gpr_strk1_in
+                                stroke3.points[n].co=stroke1.points[nn].co
+                                stroke3.points[n].strength=stroke1.points[nn].strength
+                                stroke3.points[n].pressure=stroke1.points[nn].pressure
+                            for n in range (l2):
+                                nn=n+l1
+                                nn2 = gpr_strk2_out - n
+                                #print(stroke2.points[nn2].co)
+                                stroke3.points[nn].co=stroke2.points[nn2].co
+                                stroke3.points[nn].strength=stroke2.points[nn2].strength
+                                stroke3.points[nn].pressure=stroke2.points[nn2].pressure                            
+                        else:
+                            print("ciclic = True, area chica")
+                            #dibujo 3 y 4
+                            l1 = gpr_strk1_in
+                            l2 = gpr_strk2_out-gpr_strk2_in
+                            l3 = len(stroke1.points)-gpr_strk1_out                 
+                            c = l1+l2+l3
+                            stroke3.points.add(count= c)
+                            print ("MODIFICANDO EL INTERIOR DE LA LÍNEA")
+                            for n in range(l1):                                
+                                stroke3.points[n].co=stroke1.points[n].co
+                                stroke3.points[n].strength=stroke1.points[n].strength
+                                stroke3.points[n].pressure=stroke1.points[n].pressure
+                            for n in range (l2):
+                                nn=n+l1
+                                nn2 = n + gpr_strk2_in
+                                #print(stroke2.points[nn2].co)
+                                stroke3.points[nn].co=stroke2.points[nn2].co
+                                stroke3.points[nn].strength=stroke2.points[nn2].strength
+                                stroke3.points[nn].pressure=stroke2.points[nn2].pressure
+                            for n in range (l3):
+                                nn=n+l1+l2
+                                nn2 = n + gpr_strk1_out
+                                #print(stroke2.points[nn2].co)
+                                stroke3.points[nn].co=stroke1.points[nn2].co
+                                stroke3.points[nn].strength=stroke1.points[nn2].strength
+                                stroke3.points[nn].pressure=stroke1.points[nn2].pressure 
+                            #dibujo 1 y 2
+                        stroke3.draw_cyclic = True
+                        
+                    else:     
+                        l1 = gpr_strk1_in
+                        l2 = gpr_strk2_out-gpr_strk2_in
+                        l3 = len(stroke1.points)-gpr_strk1_out 
+                        #Todo: si la linea es ciclica 
+                        #si la linea no es ciclica
+                        c = l1+l2+l3
+                        stroke3.points.add(count= c)
+                        print ("MODIFICANDO EL INTERIOR DE LA LÍNEA")
+                        for n in range(l1):
+                            stroke3.points[n].co=stroke1.points[n].co
+                            stroke3.points[n].strength=stroke1.points[n].strength
+                            stroke3.points[n].pressure=stroke1.points[n].pressure
+                        for n in range (l2):
+                            nn=n+l1
+                            nn2= n +gpr_strk2_in
+                            #print(stroke2.points[nn2].co)
+                            stroke3.points[nn].co=stroke2.points[nn2].co
+                            stroke3.points[nn].strength=stroke2.points[nn2].strength
+                            stroke3.points[nn].pressure=stroke2.points[nn2].pressure
+                        for n in range(l3):
+                            nn = n+l1+l2
+                            nn2 = n+gpr_strk1_out
+                            stroke3.points[nn].co=stroke1.points[nn2].co
+                            stroke3.points[nn].strength=stroke1.points[nn2].strength
+                            stroke3.points[nn].pressure=stroke1.points[nn2].pressure   
+                
+                    
                 #ELIMINAMOS LOS DOS STROKES ANTERIORES               
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
@@ -256,7 +312,7 @@ def gpr_refine():
                     stroke3.points[nn].co=stroke2.points[nn2].co
                     stroke3.points[nn].strength=stroke2.points[nn2].strength
                     stroke3.points[nn].pressure=stroke2.points[nn2].pressure                   
-                stroke3.draw_cyclic = False 
+                
                 #ELIMINAR LOS DOS STROKES ANTERIORES
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
@@ -287,7 +343,7 @@ def gpr_refine():
                     stroke3.points[nn].co=stroke1.points[nn2].co
                     stroke3.points[nn].strength=stroke1.points[nn2].strength
                     stroke3.points[nn].pressure=stroke1.points[nn2].pressure                   
-                stroke3.draw_cyclic = False  
+                 
                 #ELIMINAR LOS DOS STROKES ANTERIORES
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
