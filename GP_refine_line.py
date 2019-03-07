@@ -1,6 +1,6 @@
 """
 GREASE PENCIL: REFINE LINE
-Version: 0.02
+Version: 0.03
 """
 import bpy
 import mathutils
@@ -169,13 +169,13 @@ def gpr_refine():
                         bpy.ops.gpencil.paintmode_toggle()
                         print (">in: ", gpr_strk2_in, "   out: ",gpr_strk2_out , " len: ", len(stroke2.points))
                 
+                
                 lyr = bpy.context.object.data.layers.active
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
                 stroke3.line_width = stroke1.line_width#Todo: Detectar el size del brush actual para asignar este valor
-                stroke3.material_index = stroke1.material_index
+                stroke3.material_index = stroke1.material_index#Todo: Detectar Usar el material que usa el anteultima stroke
                 #creamos el largo final de la linea
-                
                 if gpr_close_line == True:
                     #LINEA 1 DESDE IN A OUT, LINEA 2 DESDE IN A OUT
                     l1 = gpr_strk1_out-gpr_strk1_in
@@ -197,7 +197,7 @@ def gpr_refine():
                         stroke3.points[nn].co=stroke2.points[nn2].co
                         stroke3.points[nn].strength=stroke2.points[nn2].strength
                         stroke3.points[nn].pressure=stroke2.points[nn2].pressure
-                    bpy.context.object.data.layers.active.active_frame.strokes[-1].draw_cyclic#Esto debería cerrar la linea.
+                    stroke3.draw_cyclic = True
                 else:
                     #Creamos una tercera linea para alojar el resultado 
                     l1 = gpr_strk1_in
@@ -223,7 +223,8 @@ def gpr_refine():
                         stroke3.points[nn].co=stroke1.points[nn2].co
                         stroke3.points[nn].strength=stroke1.points[nn2].strength
                         stroke3.points[nn].pressure=stroke1.points[nn2].pressure   
-                 
+                if stroke1.draw_cyclic == True:
+                    stroke3.draw_cyclic = True
                 #ELIMINAMOS LOS DOS STROKES ANTERIORES               
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
@@ -238,7 +239,7 @@ def gpr_refine():
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
                 stroke3.line_width = stroke1.line_width#Todo: Detectar el size del brush actual para asignar este valor
-                stroke3.material_index = stroke1.material_index
+                stroke3.material_index = stroke1.material_index#Todo: Detectar Usar el material que usa el anteultima stroke
                 #creamos el largo final de la linea
                 l1 = gpr_strk1_in
                 l2 = len(stroke2.points)-gpr_strk2_in
@@ -255,7 +256,7 @@ def gpr_refine():
                     stroke3.points[nn].co=stroke2.points[nn2].co
                     stroke3.points[nn].strength=stroke2.points[nn2].strength
                     stroke3.points[nn].pressure=stroke2.points[nn2].pressure                   
-                  
+                stroke3.draw_cyclic = False 
                 #ELIMINAR LOS DOS STROKES ANTERIORES
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
@@ -266,7 +267,7 @@ def gpr_refine():
                 stroke3= lyr.active_frame.strokes.new()
                 stroke3.display_mode = '3DSPACE'
                 stroke3.line_width = stroke1.line_width#Todo: Detectar el size del brush actual para asignar este valor
-                stroke3.material_index = stroke1.material_index
+                stroke3.material_index = stroke1.material_index#Todo: Detectar Usar el material que usa el anteultima stroke
                 #creamos el largo final de la linea
                 l1 = len(stroke2.points)-gpr_strk2_in
                 l2 = len(stroke1.points)-gpr_strk1_in
@@ -286,7 +287,7 @@ def gpr_refine():
                     stroke3.points[nn].co=stroke1.points[nn2].co
                     stroke3.points[nn].strength=stroke1.points[nn2].strength
                     stroke3.points[nn].pressure=stroke1.points[nn2].pressure                   
-                 
+                stroke3.draw_cyclic = False  
                 #ELIMINAR LOS DOS STROKES ANTERIORES
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                 bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
@@ -308,7 +309,14 @@ class ModalOperator(bpy.types.Operator):
             
             self.lmb = event.value == 'RELEASE'
             #print (self.lmb)
-            
+            """
+            if event.type == 'LEFTMOUSE' :
+                # we could handle PRESS and RELEASE individually if necessary
+                self.lmb = event.value == 'RELEASE'
+                print ("dibujando")
+            if event.type == 'LEFTMOUSE' and value == 'RELEASE':
+                print ("dejo de dibujar")
+            """
         elif self.lmb == False:
             gpr_refine() 
             print ("listo!")
@@ -318,7 +326,8 @@ class ModalOperator(bpy.types.Operator):
             print ("DESACTIVADO")  
             print ("")   
             print ("")        
-            return {'CANCELLED'}           
+            return {'CANCELLED'}
+            #return {'RUNNING_MODAL'}
 
         return {'PASS_THROUGH'}
 
