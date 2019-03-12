@@ -1,6 +1,7 @@
 """
 GREASE PENCIL: REFINE LINE
 Version: 0.06
+Author: Victor L. Caballero
 """
 import bpy
 import mathutils as mu
