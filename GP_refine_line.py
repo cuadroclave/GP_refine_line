@@ -1,7 +1,6 @@
 """
 GREASE PENCIL: REFINE LINE
-Version: 0.05
-Author : Victor L. Caballero
+Version: 0.06
 """
 import bpy
 import mathutils as mu
@@ -21,11 +20,14 @@ def gpr_set_point(stroke3, stroke):
 def gpr_refine():
     print("--------------------iniciando")
     #DECLARANDO VARIABLES INICIALES
-    gpr_workingDistance=0.1
+    gpr_cyclic = 4# nivel de sensibilidad para cerrar la linea.
+    
+    
+    gpr_workingDistance=0.1#Tal vez no sea necesario declarar esta variable acá
     gpr_minDistance = gpr_workingDistance#Variara segun se vaya encontrando un nuevo vertice mas cercano
     gpr_in = 0 #Si se encuentra un punto de inicio este valor cambia
     gpr_out = 0 #Si se encuentra un punto de final este valor cambia
-    gpr_cyclic = 4
+    
     
     gpr_strk1_in = 0
     gpr_strk1_out = 0
@@ -246,7 +248,6 @@ def gpr_refine():
                         #ELIMINAMOS LOS DOS STROKES ANTERIORES               
                         bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke1)
                         bpy.context.object.data.layers.active.active_frame.strokes.remove(stroke2)
-                        bpy.ops.ed.undo_push()
                                                
                         
                     elif gpr_in == 1:                        
